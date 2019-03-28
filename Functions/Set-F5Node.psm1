@@ -15,6 +15,10 @@ function Set-F5Node {
 
     $Session = Connect-F5
 
+    if($Session -eq $null){
+        return
+    }
+
     #Edit the pools here
     $Pools = @('endeca_pool','eway_http_http2','eway_https_http2')
 

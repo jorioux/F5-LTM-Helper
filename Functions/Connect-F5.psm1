@@ -5,6 +5,7 @@ function Connect-F5 {
     )
 
     $SessionFile = $([system.io.path]::GetTempPath()+"f5-session.xml")
+    $Session = $null
 
     if($Force) {
 
@@ -36,9 +37,16 @@ function Connect-F5 {
     }
 
     $Cred = Set-F5CredFile
-    $F5Names = Set-F5NamesFile
-    $ActiveFound = $false
+    if($Cred -eq $null){
+        return $Session
+    }
 
+    $F5Names = Set-F5NamesFile
+    if($F5Names -eq $null){
+        return $Session
+    }
+    
+    $ActiveFound = $false
 
     #For each F5 name (or ip) in the f5-names.xml file
     $F5Names | %{
@@ -72,6 +80,9 @@ function Connect-F5 {
     }
     if($Session -eq $null){
         write-host -foregroundcolor red "Cannot find active F5"
+        if((read-host "Do you want to enter new F5 credentials ? (y/n)") -eq 'y'){
+            Set-F5CredFile -Force
+        }
     }
     return $Session
 }
@@ -110,7 +121,12 @@ Function Set-F5CredFile {
     }
     if($Cred -eq $null){
         write-host -foregroundcolor cyan "Creating credential file..."
-        $Cred = Get-Credential
+        try {
+            $Cred = Get-Credential
+        } catch {
+            write-host -foregroundcolor red "Failed to create credential file"
+            return $Cred
+        }
         if($Cred -eq $null){
             write-host -foregroundcolor red "Failed to create credential file"
         } else {
