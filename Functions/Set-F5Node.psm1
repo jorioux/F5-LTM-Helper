@@ -22,12 +22,12 @@ function Set-F5Node {
     #Edit the pools here
     $Pools = @('endeca_pool','eway_http_http2','eway_https_http2')
 
-    $Pools | %{
+    $Pools | ForEach-Object {
         $PoolName = $_
         $MemberName = ""
         $Confirm = $false
         write-host -foregroundcolor white "`nPool: $PoolName"
-        Get-PoolMember -PoolName $PoolName -F5Session $Session | %{
+        Get-PoolMember -PoolName $PoolName -F5Session $Session | ForEach-Object {
             if($_.name -like "*$($Name)*"){
                 $MemberName = $_.name
                 write-host -NoNewLine "`tCurrent status for $MemberName : "

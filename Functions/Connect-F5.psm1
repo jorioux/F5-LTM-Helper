@@ -49,7 +49,7 @@ function Connect-F5 {
     $ActiveFound = $false
 
     #For each F5 name (or ip) in the f5-names.xml file
-    $F5Names | %{
+    $F5Names | ForEach-Object {
 
         #If the ACTIVE F5 have not been found yet
         if($ActiveFound -ne $true){
