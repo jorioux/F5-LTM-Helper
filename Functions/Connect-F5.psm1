@@ -98,9 +98,9 @@ Function Set-F5CredFile {
 
     #If username and password specified at arguments
     if(! ([string]::IsNullOrEmpty($Username))){
-        write-host "USername: $Username"
+        write-host "Username: $Username"
         if([string]::IsNullOrEmpty($Password)){
-            $Password = Read-Host -assecurestring "Password: "
+            $Password = Read-Host -assecurestring "Password"
         }
         $secureStringPwd = $Password | ConvertTo-SecureString -AsPlainText -Force 
         $Cred = New-Object System.Management.Automation.PSCredential -ArgumentList $Username, $secureStringPwd
