@@ -20,7 +20,3 @@
 *.PDF	 diff=astextplain
 *.rtf	 diff=astextplain
 *.RTF	 diff=astextplain
-
-# Custom for PowerShell
-*.psm1 diff
-*.psd1 diff
