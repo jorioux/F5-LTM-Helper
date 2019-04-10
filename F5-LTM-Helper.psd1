@@ -12,7 +12,7 @@
 RootModule = 'F5-LTM-Helper.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.1'
+ModuleVersion = '1.2'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -66,10 +66,10 @@ RequiredModules = @('F5-LTM')
 # FormatsToProcess = @()
 
 # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
-NestedModules = @('Functions\Set-F5Node','Functions\Connect-F5')
+NestedModules = @('Functions\Set-F5Node','Functions\Connect-F5','Functions\Set-CredFile')
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = 'Set-F5Node', 'Connect-F5','Set-F5CredFile','Set-F5NamesFile'
+FunctionsToExport = 'Set-F5Node', 'Connect-F5','Set-CredFile','Set-F5NamesFile'
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = @()

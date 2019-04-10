@@ -1,5 +1,16 @@
 function Set-F5Node {
 
+    <#
+        .SYNOPSIS
+            Interactive function to put pools members down or up
+        .EXAMPLE
+            Set-F5Node node1 -Up -Sync
+        .EXAMPLE
+            Set-F5Node -Sync
+        .LINK
+            https://github.com/jorioux/F5-LTM-Helper
+    #>
+
     param(
         [Parameter(Mandatory = $false,ValueFromPipeline = $true)]
         [string]$Name,
@@ -9,7 +20,7 @@ function Set-F5Node {
     )
 
     if($Up -and $Down){
-        write-host -foregroundcolor yellow "Specify either Up or Down, not both"
+        Write-Warning "Specify either Up or Down, not both"
         return
     }
 

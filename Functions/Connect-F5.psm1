@@ -1,19 +1,37 @@
 function Connect-F5 {
 
+    <#
+        .SYNOPSIS
+            Connects to an active F5
+        .EXAMPLE
+            Connect-F5
+        .LINK
+            https://github.com/jorioux/F5-LTM-Helper
+    #>
+
     param(
+        [Parameter(Mandatory = $false)]
+        [string]$SessionFile=$([system.io.path]::GetTempPath()+"f5-session.xml"),
         [switch]$Force
     )
 
-    $SessionFile = $([system.io.path]::GetTempPath()+"f5-session.xml")
+    if($VerbosePreference -ne "SilentlyContinue"){
+        $Verbose = $true
+    } else {
+        $Verbose = $false
+    }
+
     $Session = $null
+
+    Write-Verbose "Using session file: $SessionFile"
 
     if($Force) {
 
-        Remove-Item -Path $SessionFile -ErrorAction SilentlyContinue
+        Remove-Item -Path $SessionFile -ErrorAction SilentlyContinue -Verbose:$Verbose
         
     } elseif(Test-Path($SessionFile)) {
 
-        $Session = Import-CliXml -Path $SessionFile
+        $Session = Import-CliXml -Path $SessionFile -Verbose:$Verbose
 
         $Headers = New-Object "System.Collections.Generic.Dictionary``2[System.String,System.String]"
         $Headers.add('X-F5-Auth-Token',$Session.WebSession.Headers.'X-F5-Auth-Token')
@@ -26,22 +44,23 @@ function Connect-F5 {
             $Link -replace 'localhost', $this.Name
         } -PassThru 
 
-        if($(Get-F5Status -F5Session $Session -ErrorAction SilentlyContinue) -eq "ACTIVE"){
-            write-host -foregroundcolor white "Connected to active F5: $($Session.Name)"
+        if($(Get-F5Status -F5Session $Session -ErrorAction SilentlyContinue -Verbose:$Verbose) -eq "ACTIVE"){
+            Write-Verbose "Connected to active F5: $($Session.Name)"
+            Write-Verbose $("Session token expiration: "+$Session.WebSession.Headers.'Token-Expiration')
             return $Session
         } else {
-            write-host -foregroundcolor white "Not connected to an ACTIVE F5"
+            Write-Warning "Not connected to an ACTIVE F5"
         }
     } else {
-        write-host -foregroundcolor white "Creating a new F5 session file"
+        Write-Verbose "Creating a new F5 session file"
     }
 
-    $Cred = Set-F5CredFile
+    $Cred = Set-CredFile -Verbose:$Verbose
     if($Cred -eq $null){
         return $Session
     }
 
-    $F5Names = Set-F5NamesFile
+    $F5Names = Set-F5NamesFile -Verbose:$Verbose
     if($F5Names -eq $null){
         return $Session
     }
@@ -54,110 +73,73 @@ function Connect-F5 {
         #If the ACTIVE F5 have not been found yet
         if($ActiveFound -ne $true){
 
-            write-host -nonewline "Checking state of $_..."
+            Write-Verbose "Checking state of $_..."
 
             #Get session object
-            $Session = New-F5Session -LTMName $_ -LTMCredentials $Cred -PassThru -ErrorAction SilentlyContinue
+            $Session = New-F5Session -LTMName $_ -LTMCredentials $Cred -PassThru -ErrorAction SilentlyContinue -Verbose:$Verbose
 
             #If connection failed
             if($Session.LTMVersion -eq '0.0.0.0'){
-                write-host -foregroundcolor red "Failed"
+                Write-Warning "Failed to connect to $_"
                 $Session = $null
 
             #If connection is successful, check if its the ACTIVE F5
             } else {
-                $F5Status = Get-F5Status -F5Session $Session -ErrorAction SilentlyContinue
+                Write-Verbose "-->`tConnection is successful on $_"
+                $F5Status = Get-F5Status -F5Session $Session -ErrorAction SilentlyContinue -Verbose:$Verbose
                 if($F5Status -eq 'ACTIVE'){
-                    write-host -foregroundcolor green $F5Status
-                    $Session | Export-CliXml -Path $SessionFile
-                    write-host -foreground Magenta "Creating session on active F5: $($Session.Name)"
+                    Write-Verbose $("-->`tState of "+$_+": "+$F5Status)
+                    $Session | Export-CliXml -Path $SessionFile -Verbose:$Verbose
+                    Write-Verbose "Session exported to $SessionFile"
                     $ActiveFound = $true
                 } else {
-                    write-host -foregroundcolor yellow $F5Status
+                    Write-Verbose $("-->`tState of "+$_+": "+$F5Status)
                 }
             }
         }
     }
     if($Session -eq $null){
-        write-host -foregroundcolor red "Cannot find active F5"
+        Write-Warning "Cannot find active F5"
         if((read-host "Do you want to enter new F5 credentials ? (y/n)") -eq 'y'){
-            Set-F5CredFile -Force
+            Set-CredFile -Force -Verbose:$Verbose
         }
     }
     return $Session
 }
 
-Function Set-F5CredFile {
-    param(
-        [string]$Username,
-        [string]$Password,
-        [switch]$Force
-    )
-
-    $CredFile = $([system.io.path]::GetTempPath()+"f5-cred.xml")
-
-    #If username and password specified at arguments
-    if(! ([string]::IsNullOrEmpty($Username))){
-        write-host "Username: $Username"
-        if([string]::IsNullOrEmpty($Password)){
-            $Password = Read-Host -assecurestring "Password"
-        }
-        $secureStringPwd = $Password | ConvertTo-SecureString -AsPlainText -Force 
-        $Cred = New-Object System.Management.Automation.PSCredential -ArgumentList $Username, $secureStringPwd
-        $Cred | Export-CliXml -Path $CredFile
-        return $Cred
-    }
-
-    write-host -nonewline "Importing credential..."
-    $Cred = $null
-    if(!($Force)){
-        try{
-            $Cred = Import-CliXml -Path $CredFile
-            write-host -foregroundcolor green "OK ($($Cred.UserName))"
-        }catch{
-            write-host -foregroundcolor red "Not found"
-    }
-        
-    }
-    if($Cred -eq $null){
-        write-host -foregroundcolor cyan "Creating credential file..."
-        try {
-            $Cred = Get-Credential
-        } catch {
-            write-host -foregroundcolor red "Failed to create credential file"
-            return $Cred
-        }
-        if($Cred -eq $null){
-            write-host -foregroundcolor red "Failed to create credential file"
-        } else {
-            $Cred | Export-CliXml -Path $CredFile
-            write-host -foregroundcolor green "Credential file created"
-        }
-    }
-    return $Cred
-}
 
 Function Set-F5NamesFile {
 
     param(
+        [Parameter(Mandatory = $false)]
+        [string]$Path=$([system.io.path]::GetTempPath()+"f5-names.xml"),
         [switch]$Force
     )
 
-    $F5NamesFile = $([system.io.path]::GetTempPath()+"f5-names.xml")
+    if($VerbosePreference -ne "SilentlyContinue"){
+        $Verbose = $true
+    } else {
+        $Verbose = $false
+    }
+
     $F5Names = $null
 
+    Write-Verbose "Using F5 names file: $Path"
+
     if(!($Force)){
-        write-host -nonewline "Importing F5 names..."
         try{
-            $F5Names = Import-CliXml -Path $F5NamesFile
-            write-host -foregroundcolor green "OK"
+            $F5Names = Import-CliXml -Path $Path
+            Write-Verbose "`tSuccessfully imported F5 names:"
+            $F5Names | ForEach-Object {
+                Write-Verbose "-->`t$_"
+            }
         }catch{
-            write-host -foregroundcolor red "Not found"
+            Write-Warning "Unable to import F5 names"
         }
     }
 
     if($F5Names -eq $null){
-        write-host -foregroundcolor cyan "Creating F5 names file..."
+        Write-Verbose "Creating F5 names file..."
         $F5Names = @()
         do {
             $input = (Read-Host "Enter F5 names")
@@ -165,10 +147,10 @@ Function Set-F5NamesFile {
         }
         until ($input -eq '')
         if($F5Names.count -ne 0){
-            $F5Names | Export-CliXml -Path $F5NamesFile
-            write-host -foregroundcolor green "F5 names file created"
+            $F5Names | Export-CliXml -Path $Path
+            Write-Verbose "F5 names exported to $Path"
         } else {
-            write-host -foregroundcolor red "Failed to create F5 names file"
+            Write-Warning "Failed to create F5 names file"
         }
     }
     return $F5Names
