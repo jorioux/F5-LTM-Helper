@@ -19,12 +19,18 @@ function Set-F5Node {
         [switch]$Sync
     )
 
+    if($VerbosePreference -ne "SilentlyContinue"){
+        $Verbose = $true
+    } else {
+        $Verbose = $false
+    }
+
     if($Up -and $Down){
         Write-Warning "Specify either Up or Down, not both"
         return
     }
 
-    $Session = Connect-F5
+    $Session = Connect-F5 -Verbose:$Verbose
 
     if($Session -eq $null){
         return
