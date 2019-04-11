@@ -17,6 +17,22 @@ Install-Module F5-LTM-Helper
 #### PowerShell v4 and earlier
 Get [PowerShellGet Module](https://docs.microsoft.com/en-us/powershell/gallery/psget/get_psget_module) first.
 
+Usage
+-
+```PowerShell
+#To show status of all nodes in pool matching *eway_http*
+Set-F5Node -Pool eway_http
+
+#To show status of all nodes matching *end*:80*
+Set-F5Node end*:80
+
+#To Sync active F5 to group
+Set-F5Node -Sync
+
+#To disable the node matching *end02* in pool matching *end*, then Sync to group
+Set-F5Node end02 -Pool endeca -Down -Sync
+```
+
 Contributing
 -
 Any contributions are welcome and feel free to open issues.
