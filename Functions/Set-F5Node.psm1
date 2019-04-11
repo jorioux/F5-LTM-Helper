@@ -88,17 +88,14 @@ function Set-F5Node {
     }
 
     if($Sync){
-        if($(Get-F5Status -F5Session $Session) -eq 'ACTIVE'){
-            write-host -NoNewLine -foregroundcolor cyan "`nSYNC $($Session.Name) to group ? "
-            if($(read-host "(y/n) ") -eq "y"){
-                write-host -NoNewLine -foregroundcolor white "`tSyncing device to group..."
-                $output = Sync-DeviceToGroup -GroupName syncgroup -F5Session $Session
-                if($output -eq 'True'){
-                    write-host -foregroundcolor green "OK"
-                } else {
-                    write-host -foregroundcolor red "FAIL"
-                }
-            }
+    #Sync Device to Group
+    if($Sync -and ($Force -or $($Confirm = read-host "`nSYNC $($Session.Name) to group ? (y/n) "; $Confirm) -eq "y") -and $(Get-F5Status -F5Session $Session) -eq 'ACTIVE'){
+        write-host -NoNewLine -foregroundcolor white "Syncing device to group..."
+        $output = Sync-DeviceToGroup -GroupName syncgroup -F5Session $Session
+        if($output -eq 'True'){
+            write-host -foregroundcolor green "OK"
+        } else {
+            write-host -foregroundcolor red "FAIL"
         }
         
     }
