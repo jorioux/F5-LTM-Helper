@@ -15,7 +15,7 @@ Function Set-CredFile {
 
     param(
         [Parameter(Mandatory = $false)]
-        [string]$Path=$([system.io.path]::GetTempPath()+"cred.xml"),
+        [string]$Path=$([system.io.path]::GetTempPath()+"f5-cred.xml"),
         [string]$Username,
         [string]$Password,
         [switch]$Force
