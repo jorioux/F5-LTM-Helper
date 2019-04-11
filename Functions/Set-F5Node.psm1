@@ -16,7 +16,8 @@ function Set-F5Node {
         [string]$Name,
         [switch]$Up,
         [switch]$Down,
-        [switch]$Sync
+        [string]$Pool,
+        [switch]$Sync,
         [switch]$Force
     )
 
@@ -37,16 +38,14 @@ function Set-F5Node {
         return
     }
 
-    #Edit the pools here
-    $Pools = @('endeca_pool','eway_http_http2','eway_https_http2')
+    $Pools = Get-Pool -F5Session $Session | Where-Object {$_.fullPath -like "*$Pool*"} | Select-Object -ExpandProperty fullPath
 
     $Pools | ForEach-Object {
         $PoolName = $_
         $MemberName = ""
         $Confirm = $false
         write-host -foregroundcolor white "`nPool: $PoolName"
-        Get-PoolMember -PoolName $PoolName -F5Session $Session | ForEach-Object {
-            if($_.name -like "*$($Name)*"){
+        Get-PoolMember -PoolName $PoolName -F5Session $Session | Where-Object {$_.name -like "*$($Name)*"} | ForEach-Object {
                 $MemberName = $_.name
                 write-host -NoNewLine "`tCurrent status for $MemberName : "
                 if($_.state -eq 'up'){
@@ -56,18 +55,19 @@ function Set-F5Node {
                 }
                 $curconns = (Get-PoolMemberStats -PoolName $PoolName -Name $MemberName -F5Session $Session)."serverside.curConns".value
                 write-host " ($curconns connections)"
-            }
         }
 
         if($MemberName -eq ""){
             write-host -foregroundcolor yellow "`tNo match for '$Name'"
         } else {
 
-            if($Up -and ($Force -or $($Confirm = read-host "`tPut $MemberName UP ? (y/n) "; $Confirm) -eq "y")){
+            #Enable Pool Member
+            if($Up -and ($Force -or $($Confirm = read-host "`tENABLE $MemberName ? (y/n) "; $Confirm) -eq "y")){
                 write-host -NoNewLine -foregroundcolor cyan "`tEnabling $MemberName..."
                 $output = Enable-PoolMember -PoolName $PoolName -Name $MemberName -F5Session $Session
 
-            } elseif($Down -and ($Force -or $($Confirm = read-host "`tPut $MemberName DOWN ? (y/n) "; $Confirm) -eq "y")){
+            #Disable Pool Member
+            } elseif($Down -and ($Force -or $($Confirm = read-host "`tDISABLE $MemberName ? (y/n) "; $Confirm) -eq "y")){
                 write-host -NoNewLine -foregroundcolor cyan "`tDisabling $MemberName..."
                 $output = Disable-PoolMember -PoolName $PoolName -Name $MemberName -Force -F5Session $Session
             }
@@ -87,7 +87,6 @@ function Set-F5Node {
         }
     }
 
-    if($Sync){
     #Sync Device to Group
     if($Sync -and ($Force -or $($Confirm = read-host "`nSYNC $($Session.Name) to group ? (y/n) "; $Confirm) -eq "y") -and $(Get-F5Status -F5Session $Session) -eq 'ACTIVE'){
         write-host -NoNewLine -foregroundcolor white "Syncing device to group..."
@@ -97,7 +96,6 @@ function Set-F5Node {
         } else {
             write-host -foregroundcolor red "FAIL"
         }
-        
     }
 
 }
