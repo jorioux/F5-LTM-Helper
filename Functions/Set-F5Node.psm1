@@ -17,6 +17,7 @@ function Set-F5Node {
         [switch]$Up,
         [switch]$Down,
         [switch]$Sync
+        [switch]$Force
     )
 
     if($VerbosePreference -ne "SilentlyContinue"){
@@ -62,20 +63,16 @@ function Set-F5Node {
             write-host -foregroundcolor yellow "`tNo match for '$Name'"
         } else {
 
-            if($Up){
-                write-host -nonewline -foregroundcolor green "`tENABLE "
-                if($($Confirm = read-host "$MemberName ? (y/n) "; $Confirm) -eq "y"){
-                    write-host -NoNewLine -foregroundcolor cyan "`tEnabling $MemberName..."
-                    $output = Enable-PoolMember -PoolName $PoolName -Name $MemberName -F5Session $Session
-                }
-            } elseif($Down){
-                write-host -nonewline -foregroundcolor red "`tDISABLE "
-                if($($Confirm = read-host "$MemberName ? (y/n) "; $Confirm) -eq "y"){
-                    write-host -NoNewLine -foregroundcolor cyan "`tDisabling $MemberName..."
-                    $output = Disable-PoolMember -PoolName $PoolName -Name $MemberName -Force -F5Session $Session
-                }
+            if($Up -and ($Force -or $($Confirm = read-host "`tPut $MemberName UP ? (y/n) "; $Confirm) -eq "y")){
+                write-host -NoNewLine -foregroundcolor cyan "`tEnabling $MemberName..."
+                $output = Enable-PoolMember -PoolName $PoolName -Name $MemberName -F5Session $Session
+
+            } elseif($Down -and ($Force -or $($Confirm = read-host "`tPut $MemberName DOWN ? (y/n) "; $Confirm) -eq "y")){
+                write-host -NoNewLine -foregroundcolor cyan "`tDisabling $MemberName..."
+                $output = Disable-PoolMember -PoolName $PoolName -Name $MemberName -Force -F5Session $Session
             }
-            if(($Up -or $Down) -and ($Confirm -eq 'y')) {
+
+            if(($Up -or $Down) -and ($Force -or $Confirm -eq 'y')) {
                 sleep 1
                 if($output -eq 'True'){
                     write-host -foregroundcolor green "OK"
