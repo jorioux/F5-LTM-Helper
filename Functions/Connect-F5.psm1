@@ -12,6 +12,8 @@ function Connect-F5 {
     param(
         [Parameter(Mandatory = $false)]
         [string]$SessionFile=$([system.io.path]::GetTempPath()+"f5-session.xml"),
+        [string]$NamesFile=$([system.io.path]::GetTempPath()+"f5-names.xml"),
+        [string]$CredFile=$([system.io.path]::GetTempPath()+"cred.xml"),
         [switch]$Force
     )
 
@@ -55,12 +57,12 @@ function Connect-F5 {
         Write-Verbose "Creating a new F5 session file"
     }
 
-    $Cred = Set-CredFile -Verbose:$Verbose
+    $Cred = Set-CredFile -Path $CredFile -Verbose:$Verbose
     if($Cred -eq $null){
         return $Session
     }
 
-    $F5Names = Set-F5NamesFile -Verbose:$Verbose
+    $F5Names = Set-F5NamesFile -Path $NamesFile -Verbose:$Verbose
     if($F5Names -eq $null){
         return $Session
     }
