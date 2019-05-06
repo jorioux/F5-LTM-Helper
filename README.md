@@ -2,7 +2,7 @@
 > #### by Jonathan Rioux
 > ***Credits*** This module is built on top of the [`F5-LTM`](https://github.com/joel74/POSH-LTM-Rest) module by joel74
 
-A set of helper functions built on top of F5-LTM module to manage F5 Big-IP LTM load balancers
+A set of helper functions built on top of F5-LTM module to manage F5 Big-IP LTM load balancers. This module saves your F5 credentials and IPs in XML files so it automatically recreates a new session to the active F5 when the last session token expires. It also saves the session token in an XML file, so you will always reuse the same session token until it expires.
 
 Installation
 -
@@ -31,6 +31,9 @@ Set-F5Node -Sync
 
 #To disable the node matching *end02* in pool matching *end*, then Sync to group
 Set-F5Node end02 -Pool endeca -Down -Sync
+
+#To get the F5 session
+Connect-F5
 ```
 
 Contributing
