@@ -2,7 +2,7 @@ function Connect-F5 {
 
     <#
         .SYNOPSIS
-            Connects to an active F5
+            Automatically connects to an active F5
         .EXAMPLE
             Connect-F5
         .LINK
@@ -11,9 +11,13 @@ function Connect-F5 {
 
     param(
         [Parameter(Mandatory = $false)]
-        [string]$SessionFile=$([system.io.path]::GetTempPath()+"f5-session.xml"),
-        [string]$NamesFile=$([system.io.path]::GetTempPath()+"f5-names.xml"),
-        [string]$CredFile=$([system.io.path]::GetTempPath()+"cred.xml"),
+        [string]$SessionFile = $([system.io.path]::GetTempPath()+"f5-session.xml"),
+        [string]$NamesFile = $([system.io.path]::GetTempPath()+"f5-names.xml"),
+        [string]$CredFile = $([system.io.path]::GetTempPath()+"f5-cred.xml"),
+        [ValidateNotNull()]
+        [System.Management.Automation.PSCredential]
+        [System.Management.Automation.Credential()]
+        $Credential = [System.Management.Automation.PSCredential]::Empty,
         [switch]$Force
     )
 
@@ -35,6 +39,7 @@ function Connect-F5 {
 
         $Session = Import-CliXml -Path $SessionFile -Verbose:$Verbose
 
+        # rehydrating the session object from xml file
         $Headers = New-Object "System.Collections.Generic.Dictionary``2[System.String,System.String]"
         $Headers.add('X-F5-Auth-Token',$Session.WebSession.Headers.'X-F5-Auth-Token')
         $Headers.add('Token-Expiration',$Session.WebSession.Headers.'Token-Expiration')
@@ -46,6 +51,7 @@ function Connect-F5 {
             $Link -replace 'localhost', $this.Name
         } -PassThru 
 
+        # if active F5 have been found, return the session
         if($(Get-F5Status -F5Session $Session -ErrorAction SilentlyContinue -Verbose:$Verbose) -eq "ACTIVE"){
             Write-Verbose "Connected to active F5: $($Session.Name)"
             Write-Verbose $("Session token expiration: "+$Session.WebSession.Headers.'Token-Expiration')
@@ -57,13 +63,20 @@ function Connect-F5 {
         Write-Verbose "Creating a new F5 session file"
     }
 
-    $Cred = Set-CredFile -Path $CredFile -Verbose:$Verbose
-    if($Cred -eq $null){
-        return $Session
+    # if Credential not specified from parameter, we get it from xml file
+    if($Credential -eq [System.Management.Automation.PSCredential]::Empty){
+        try{
+            $Credential = Set-CredFile -Path $CredFile -Verbose:$Verbose
+        } catch {
+            return $Session
+        }
+        if($Credential -eq [System.Management.Automation.PSCredential]::Empty){
+            return $Session
+        }
     }
 
     $F5Names = Set-F5NamesFile -Path $NamesFile -Verbose:$Verbose
-    if($F5Names -eq $null){
+    if($null -eq $F5Names){
         return $Session
     }
     
@@ -78,7 +91,7 @@ function Connect-F5 {
             Write-Verbose "Checking state of $_..."
 
             #Get session object
-            $Session = New-F5Session -LTMName $_ -LTMCredentials $Cred -PassThru -ErrorAction SilentlyContinue -Verbose:$Verbose
+            $Session = New-F5Session -LTMName $_ -LTMCredentials $Credential -PassThru -ErrorAction SilentlyContinue -Verbose:$Verbose
 
             #If connection failed
             if($Session.LTMVersion -eq '0.0.0.0'){
@@ -100,7 +113,7 @@ function Connect-F5 {
             }
         }
     }
-    if($Session -eq $null){
+    if($null -eq $Session){
         Write-Warning "Cannot find active F5"
         if((read-host "Do you want to enter new F5 credentials ? (y/n)") -eq 'y'){
             Set-CredFile -Force -Verbose:$Verbose
@@ -137,14 +150,15 @@ Function Set-F5NamesFile {
             }
         }catch{
             Write-Warning "Unable to import F5 names"
+            Write-Warning "Enter F5 names (or IPs) below, one per line"
         }
     }
 
-    if($F5Names -eq $null){
+    if($null -eq $F5Names){
         Write-Verbose "Creating F5 names file..."
         $F5Names = @()
         do {
-            $input = (Read-Host "Enter F5 names")
+            $input = (Read-Host "F5 names")
             if ($input -ne '') {$F5Names += $input}
         }
         until ($input -eq '')

@@ -34,7 +34,7 @@ function Set-F5Node {
 
     $Session = Connect-F5 -Verbose:$Verbose
 
-    if($Session -eq $null){
+    if($null -eq $Session){
         return
     }
 

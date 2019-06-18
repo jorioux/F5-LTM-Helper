@@ -15,7 +15,7 @@ Function Set-CredFile {
 
     param(
         [Parameter(Mandatory = $false)]
-        [string]$Path=$([system.io.path]::GetTempPath()+"f5-cred.xml"),
+        [string]$Path = $([system.io.path]::GetTempPath()+"f5-cred.xml"),
         [string]$Username,
         [string]$Password,
         [switch]$Force
@@ -27,48 +27,48 @@ Function Set-CredFile {
         $Verbose = $false
     }
 
-    Write-Verbose "Using cred file: $Path"
+    Write-Verbose "Using credential file: $Path"
 
-    #If username and password specified at arguments
+    #If username and password specified as arguments
     if(! ([string]::IsNullOrEmpty($Username))){
         Write-Verbose "Using username: $Username"
         if([string]::IsNullOrEmpty($Password)){
             $Password = Read-Host -AsSecureString "Password"
         }
         $secureStringPwd = $Password | ConvertTo-SecureString -AsPlainText -Force 
-        $Cred = New-Object System.Management.Automation.PSCredential -ArgumentList $Username, $secureStringPwd
-        $Cred | Export-CliXml -Path $Path -Verbose:$Verbose
+        $Credential = New-Object System.Management.Automation.PSCredential -ArgumentList $Username, $secureStringPwd
+        $Credential | Export-CliXml -Path $Path -Verbose:$Verbose
         Write-Verbose "Exported credential to $Path"
-        return $Cred
+        return $Credential
     }
 
     #Try to import the credentials from xml file
-    $Cred = $null
+    $Credential = [System.Management.Automation.PSCredential]::Empty
     if(!($Force)){
         try{
-            $Cred = Import-CliXml -Path $Path -Verbose:$Verbose
-            Write-Verbose "`tSuccessfully imported credential (Username: $($Cred.UserName))"
+            $Credential = Import-CliXml -Path $Path -Verbose:$Verbose
+            Write-Verbose "Successfully imported credential (Username: $($Cred.UserName))"
         }catch{
-            Write-Warning "`tUnable to import credential"
+            Write-Warning "Unable to import credential"
         }
     }
 
     #If unable to import existing creds, we create new one
-    if($Cred -eq $null){
+    if($Credential -eq [System.Management.Automation.PSCredential]::Empty){
         Write-Verbose "Creating credential file..."
         try {
-            $Cred = Get-Credential
+            $Credential = Get-Credential
         } catch {
-            Write-Warning "`tFailed to create credential file"
-            return $Cred
+            Write-Warning "Failed to create credential file"
+            return $Credential
         }
-        if($Cred -eq $null){
-            Write-Warning "`tFailed to create credential file"
+        if($Credential -eq [System.Management.Automation.PSCredential]::Empty){
+            Write-Warning "Failed to create credential file"
         } else {
-            $Cred | Export-CliXml -Path $Path -Verbose:$Verbose
-            Write-Verbose "`tExported cred file to $Path"
+            $Credential | Export-CliXml -Path $Path -Verbose:$Verbose
+            Write-Verbose "Exported cred file to $Path"
         }
     }
 
-    return $Cred
+    return $Credential
 }
